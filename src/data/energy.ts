@@ -452,7 +452,7 @@ const getEnergyData = async (
   const emission_array = [] as  CarbonDioxideEquivalent_Emission[];
 
 
-  // TODO: Move this to config
+  // TODO: Move this to config in UI
   const co2_import_electricity_offset_factor = 1.0; // Percentage of non-fossil fuels you import and offset (i.e. GreenPower at 100% is a complete offset)
   const co2_import_gas_offset_factor = 0.0;
 
@@ -475,7 +475,7 @@ if (co2SignalEntityGridIntensity !== undefined) {
       start,
       consumptionStatIDs,
       co2SignalEntityGridIntensity,
-      600,
+      600, // Default CO2equiv intensity TODO - Make this configurable
       1.0,
       end,
       dayDifference > 35 ? "month" : dayDifference > 2 ? "day" : "hour"
@@ -588,7 +588,7 @@ if (co2SignalEntityGridIntensity !== undefined) {
   };
 
   // eslint-disable-next-line no-console
-  console.log({ emissions });
+  // console.log({ emissions });
 
 
 
