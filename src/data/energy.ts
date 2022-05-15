@@ -255,13 +255,18 @@ export const getFossilEnergyConsumption = async (
   | ElectricityCarbonDioxideEquivalent
   | GasCarbonDioxideEquivalent;
 
-  export const sumEmissions = ( carbonDioxideEquivalent_Emission: CarbonDioxideEquivalent_Emission ) =>
-     (carbonDioxideEquivalent_Emission.isEmission ? 1.0 : -1.0) * (carbonDioxideEquivalent_Emission.carbonDioxideEquivalent 
-      ? Object.values(carbonDioxideEquivalent_Emission.carbonDioxideEquivalent).reduce(
-        (sum, a) => sum + a,
-        0
-      )
-      : 0);
+  export const sumEmissions = ( carbonDioxideEquivalent_Emission: CarbonDioxideEquivalent_Emission ) => 
+     ( carbonDioxideEquivalent_Emission ?
+    (carbonDioxideEquivalent_Emission.isEmission ? 1.0 : -1.0) *
+     (
+        carbonDioxideEquivalent_Emission.carbonDioxideEquivalent ?
+        Object.values(carbonDioxideEquivalent_Emission.carbonDioxideEquivalent).reduce(
+          (sum, a) => sum + a,
+          0
+        )
+      : 0)
+      :0
+     );
   
 
 
@@ -294,8 +299,6 @@ interface IDictionary {
 
 // Probably want a type (gas, grid/electricity) and another type for the kind of emission (emitted, avoided, offset)
 export interface Emissions {
-  emission_array?: CarbonDioxideEquivalent_Emission[];
-
   emission_array3_emissions: IDictionary;
   emission_array3_offsets: IDictionary;
   emission_array3_avoided: IDictionary;
@@ -609,30 +612,9 @@ const getEnergyData = async (
 
   let fossilEnergyConsumption: FossilEnergyConsumption | undefined;
 
-  const emission_array = [] as  CarbonDioxideEquivalent_Emission[];
 
 
-
-
-
-  
-
-
-
-  // eslint-disable-next-line no-console
-  console.log({ gridConsumptionStatIDs });
-
-  // eslint-disable-next-line no-console
-  console.log({ gridReturnStatIDs });
-
-  // eslint-disable-next-line no-console
-  console.log({ gasConsumptionStatIDs });
-
-
-  // eslint-disable-next-line no-console
-  console.log({ stats });
-
-  
+ 
 
   // TODO: Work out how this deals with gas.... oh, it ignores it.....
   // Consider renaming this to just be grid fossil consumption (that is what the graphic shows so I guess it makes sense.......)
@@ -648,105 +630,6 @@ const getEnergyData = async (
     );
 }
 
-
-
-if (co2SignalEntityGridIntensity !== undefined) {
-    let carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
-      hass!,
-      start,
-      gridConsumptionStatIDs,
-      co2SignalEntityGridIntensity,
-      600, // Default CO2equiv intensity TODO - Make this configurable
-      1.0,
-      end,
-      dayDifference > 35 ? "month" : dayDifference > 2 ? "day" : "hour"
-    );
-    const carbonDioxideEquivalentElectricityEmissions = {} as  ElectricityCarbonDioxideEquivalent;
-    carbonDioxideEquivalentElectricityEmissions.isEmission = true;
-    carbonDioxideEquivalentElectricityEmissions.carbonDioxideEquivalent = carbonDioxideEquivalentTemp;
-    carbonDioxideEquivalentElectricityEmissions.type = "grid";
-    carbonDioxideEquivalentElectricityEmissions.kind = "emissions";
-    emission_array.push( carbonDioxideEquivalentElectricityEmissions );
-
-    // emission_array3[gridConsumptionStatIDs[0]] = carbonDioxideEquivalentElectricityEmissions;
-
-    
-   carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
-    hass!,
-    start,
-    gridConsumptionStatIDs,
-    co2SignalEntityGridIntensity,
-    600,
-    co2_import_electricity_offset_factor,
-    end,
-    dayDifference > 35 ? "month" : dayDifference > 2 ? "day" : "hour"
-  );
-  const carbonDioxideEquivalentElectricityOffsets = {} as  ElectricityCarbonDioxideEquivalent;
-
-  carbonDioxideEquivalentElectricityOffsets.isEmission = false;
-  carbonDioxideEquivalentElectricityOffsets.carbonDioxideEquivalent = carbonDioxideEquivalentTemp;
-  carbonDioxideEquivalentElectricityOffsets.type = "grid";
-  carbonDioxideEquivalentElectricityOffsets.kind = "offsets";
-  emission_array.push( carbonDioxideEquivalentElectricityOffsets );
-
-  
-
-     carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
-      hass!,
-      start,
-      gridReturnStatIDs,
-      co2SignalEntityGridIntensity,
-      600,
-      1.0,
-      end,
-      dayDifference > 35 ? "month" : dayDifference > 2 ? "day" : "hour"
-    );
-    const carbonDioxideEquivalentElectricityAvoided = {} as  ElectricityCarbonDioxideEquivalent;
-
-    carbonDioxideEquivalentElectricityAvoided.isEmission = false;
-    carbonDioxideEquivalentElectricityAvoided.carbonDioxideEquivalent = carbonDioxideEquivalentTemp;
-    carbonDioxideEquivalentElectricityAvoided.type = "grid";
-    carbonDioxideEquivalentElectricityAvoided.kind = "avoided";
-    emission_array.push( carbonDioxideEquivalentElectricityAvoided );
-
-    
-     carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
-      hass!,
-      start,
-      gasConsumptionStatIDs,
-      co2SignalEntityGridIntensity,
-      500,
-      1.0,
-      end,
-      dayDifference > 35 ? "month" : dayDifference > 2 ? "day" : "hour"
-    );
-    const carbonDioxideEquivalentGasEmissions = {} as  GasCarbonDioxideEquivalent;
-
-    carbonDioxideEquivalentGasEmissions.isEmission = true;
-    carbonDioxideEquivalentGasEmissions.carbonDioxideEquivalent = carbonDioxideEquivalentTemp;
-    carbonDioxideEquivalentGasEmissions.type = "gas";
-    carbonDioxideEquivalentGasEmissions.kind = "emissions";
-    emission_array.push( carbonDioxideEquivalentGasEmissions );
-
-    
-   carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
-    hass!,
-    start,
-    gasConsumptionStatIDs,
-    co2SignalEntityGridIntensity,
-    500,
-    co2_import_gas_offset_factor,
-    end,
-    dayDifference > 35 ? "month" : dayDifference > 2 ? "day" : "hour"
-  );
-  const carbonDioxideEquivalentGasOffsets = {} as  GasCarbonDioxideEquivalent;
-
-  carbonDioxideEquivalentGasOffsets.isEmission = false;
-  carbonDioxideEquivalentGasOffsets.carbonDioxideEquivalent = carbonDioxideEquivalentTemp;
-  carbonDioxideEquivalentGasOffsets.type = "gas";
-  carbonDioxideEquivalentGasOffsets.kind = "offsets";
-  emission_array.push( carbonDioxideEquivalentGasOffsets );
-}
 
 
 
@@ -765,7 +648,6 @@ if (co2SignalEntityGridIntensity !== undefined) {
 
  
   const emissions = {
-    emission_array: emission_array,
     emission_array3_emissions: emission_array3_emissions,
     emission_array3_offsets: emission_array3_offsets,
     emission_array3_avoided: emission_array3_avoided,

@@ -291,149 +291,185 @@ export class HuiEnergyCarbonEmissionsGraphCard
     };
 
 
-    const carbonDioxideEquivalentElectricityEmissions = energyData.emissions.emission_array[0].carbonDioxideEquivalent;
-    const carbonDioxideEquivalentElectricityAvoided = energyData.emissions.emission_array[1].carbonDioxideEquivalent;
-    const carbonDioxideEquivalentElectricityOffsets = energyData.emissions.emission_array[2].carbonDioxideEquivalent;
-    const carbonDioxideEquivalentGasEmissions = energyData.emissions.emission_array[3].carbonDioxideEquivalent;
-    const carbonDioxideEquivalentGasOffsets = energyData.emissions.emission_array[4].carbonDioxideEquivalent;
-
-    // TODO: Move this to an array to loop over (need to capture the sign of the carbon also in that)
-    let allKeys: string[] = [];
-    Object.values(energyData.emissions.emission_array).forEach((emission) => {
-        allKeys = allKeys.concat(Object.keys(emission.carbonDioxideEquivalent));
+    let allSensorKeys: string[] = [];
+    Object.values(energyData.emissions).forEach((emission) => {
+        allSensorKeys = allSensorKeys.concat(Object.keys(emission));
     });
-    const uniqueKeys = Array.from(new Set(allKeys));
+    const uniqueSensorKeys = Array.from(new Set(allSensorKeys));
 
- 
+    let allTimeKeys: string[] = [];
+    Object.values(energyData.emissions).forEach((emission) => {
+        for (const sensorKeySensor of uniqueSensorKeys) {
+          if(emission[sensorKeySensor])
+          {
+            allTimeKeys = allTimeKeys.concat(Object.keys(emission[sensorKeySensor].carbonDioxideEquivalent));
+          }
+        }
+    });
+    const uniqueTimeKeys = Array.from(new Set(allTimeKeys));
+
+    
+
+    for (const sensorKeySensor of uniqueSensorKeys) {
+      let borderColor = undefined;
+      let labelText = undefined;
+      let direction = 1.0;
+      let carbonDioxideEquivalentEmissions = undefined;
+
+      if(energyData.emissions.emission_array3_emissions[sensorKeySensor])
+      {
+        if(energyData.emissions.emission_array3_emissions[sensorKeySensor].type === "grid")
+        {
+          borderColor = colors.emissions_electricity;
+          labelText = labels.emissions_electricity;
+          carbonDioxideEquivalentEmissions = energyData.emissions.emission_array3_emissions[sensorKeySensor].carbonDioxideEquivalent;
+        }
+        else
+        if(energyData.emissions.emission_array3_emissions[sensorKeySensor].type === "gas")
+        {
+          borderColor = colors.emissions_gas;
+          labelText = labels.emissions_gas;
+          carbonDioxideEquivalentEmissions = energyData.emissions.emission_array3_emissions[sensorKeySensor].carbonDioxideEquivalent;
+        }
+      }
+
+      if( ! carbonDioxideEquivalentEmissions)
+      {
+        continue;
+      }
+
+      // Try to convert the emissions to the chart format here and push on to the datasets
+      const data: ChartDataset<"bar">[] = [];
+      data.push({
+        label: labelText,
+        stack: "stack",
+        backgroundColor: borderColor + "7F",
+        data: [],
+      });
+
+      // Process chart data.
+      for (const key of uniqueTimeKeys) {
+        const value = carbonDioxideEquivalentEmissions[key] || 0;
+        const date = new Date(key);
+        // @ts-expect-error
+        data[0].data.push({
+          x: date.getTime(),
+          y: direction * value
+        });
+      }
+      Array.prototype.push.apply(datasets, data);
+    }
+
+    for (const sensorKeySensor of uniqueSensorKeys) {
+      let borderColor = undefined;
+      let labelText = undefined;
+      let direction = 1.0;
+      let carbonDioxideEquivalentEmissions = undefined;
 
 
+      if(energyData.emissions.emission_array3_offsets[sensorKeySensor])
+      {
+        if(energyData.emissions.emission_array3_offsets[sensorKeySensor].type === "grid")
+        {
+          borderColor = colors.offsets_electricity;
+          labelText = labels.offsets_electricity;
+          direction = -1.0;
+          carbonDioxideEquivalentEmissions = energyData.emissions.emission_array3_offsets[sensorKeySensor].carbonDioxideEquivalent;
+        }
+        else
+        if(energyData.emissions.emission_array3_emissions[sensorKeySensor].type === "gas")
+        {
+          borderColor = colors.offsets_gas;
+          labelText = labels.offsets_gas;
+          direction = -1.0;
+          carbonDioxideEquivalentEmissions = energyData.emissions.emission_array3_offsets[sensorKeySensor].carbonDioxideEquivalent;
+        }
+      }
+
+      if( ! carbonDioxideEquivalentEmissions)
+      {
+        continue;
+      }
+
+      
+
+      // Try to convert the emissions to the chart format here and push on to the datasets
+      const data: ChartDataset<"bar">[] = [];
+      data.push({
+        label: labelText,
+        stack: "stack",
+        backgroundColor: borderColor + "7F",
+        data: [],
+      });
+
+      // Process chart data.
+      for (const key of uniqueTimeKeys) {
+        const value = carbonDioxideEquivalentEmissions[key] || 0;
+        const date = new Date(key);
+        // @ts-expect-error
+        data[0].data.push({
+          x: date.getTime(),
+          y: direction * value
+        });
+      }
+      Array.prototype.push.apply(datasets, data);
+    }
+
+    for (const sensorKeySensor of uniqueSensorKeys) {
+      let borderColor = undefined;
+      let labelText = undefined;
+      let direction = 1.0;
+      let carbonDioxideEquivalentEmissions = undefined;
+
+
+    if(energyData.emissions.emission_array3_avoided[sensorKeySensor])
+      {
+      if(energyData.emissions.emission_array3_avoided[sensorKeySensor].type === "grid")
+      {
+        borderColor = colors.avoided_electricity;
+        labelText = labels.avoided_electricity;
+        direction = -1.0;
+        carbonDioxideEquivalentEmissions = energyData.emissions.emission_array3_avoided[sensorKeySensor].carbonDioxideEquivalent;
+      }
+      else
+      if(energyData.emissions.emission_array3_emissions[sensorKeySensor].type === "gas")
+      {
+        borderColor = colors.avoided_gas;
+        labelText = labels.avoided_gas;
+        direction = -1.0;
+        carbonDioxideEquivalentEmissions = energyData.emissions.emission_array3_avoided[sensorKeySensor].carbonDioxideEquivalent;
+      }
+    }
+
+    if( ! carbonDioxideEquivalentEmissions)
+      {
+        continue;
+      }
+
+      
+
+      // Try to convert the emissions to the chart format here and push on to the datasets
+      const data: ChartDataset<"bar">[] = [];
+      data.push({
+        label: labelText,
+        stack: "stack",
+        backgroundColor: borderColor + "7F",
+        data: [],
+      });
+
+      // Process chart data.
+      for (const key of uniqueTimeKeys) {
+        const value = carbonDioxideEquivalentEmissions[key] || 0;
+        const date = new Date(key);
+        // @ts-expect-error
+        data[0].data.push({
+          x: date.getTime(),
+          y: direction * value
+        });
+      }
+      Array.prototype.push.apply(datasets, data);
+    }
   
-
-    // Not supporting dark mode as yet...... see usage graphs
-    let borderColor = colors.emissions_electricity;
-    let labelText = labels.emissions_electricity;
-
-    // Try to convert the emissions to the chart format here and push on to the datasets
-    const dataEE: ChartDataset<"bar">[] = [];
-    dataEE.push({
-      label: labelText,
-      stack: "stack",
-      backgroundColor: borderColor + "7F",
-      data: [],
-    });
-
-    // Process chart data.
-    for (const key of uniqueKeys) {
-      const value = carbonDioxideEquivalentElectricityEmissions[key] || 0;
-      const date = new Date(key);
-      // @ts-expect-error
-      dataEE[0].data.push({
-        x: date.getTime(),
-        y: +1 * value
-      });
-    }
-    Array.prototype.push.apply(datasets, dataEE);
-
-
-    borderColor = colors.offsets_electricity;
-    labelText = labels.offsets_electricity;
-
-    const dataEO: ChartDataset<"bar">[] = [];
-    dataEO.push({
-      label: labelText,
-      stack: "stack",
-      backgroundColor: borderColor + "7F",
-      data: [],
-    });
-
-    // Process chart data.
-    for (const key of uniqueKeys) {
-      const value = carbonDioxideEquivalentElectricityOffsets[key] || 0;
-      const date = new Date(key);
-      // @ts-expect-error
-      dataEO[0].data.push({
-        x: date.getTime(),
-        y: -1 * value
-      });
-    }
-    Array.prototype.push.apply(datasets, dataEO);
-
-
-    borderColor = colors.avoided_electricity;
-    labelText = labels.avoided_electricity;
-
-    const dataEA: ChartDataset<"bar">[] = [];
-    dataEA.push({
-      label: labelText,
-      stack: "stack",
-      backgroundColor: borderColor + "7F",
-      data: [],
-    });
-
-    // Process chart data.
-    for (const key of uniqueKeys) {
-      const value = carbonDioxideEquivalentElectricityAvoided[key] || 0;
-      const date = new Date(key);
-      // @ts-expect-error
-      dataEA[0].data.push({
-        x: date.getTime(),
-        y: -1 * value
-      });
-    }
-    Array.prototype.push.apply(datasets, dataEA);
-
-
-
-
-    // Gas
-    borderColor = colors.emissions_gas;
-    labelText = labels.emissions_gas;
-
-    // Try to convert the emissions to the chart format here and push on to the datasets
-    const dataGE: ChartDataset<"bar">[] = [];
-    dataGE.push({
-      label: labelText,
-      stack: "stack",
-      backgroundColor: borderColor + "7F",
-      data: [],
-    });
-
-    // Process chart data.
-    for (const key of uniqueKeys) {
-      const value = carbonDioxideEquivalentGasEmissions[key] || 0;
-      const date = new Date(key);
-      // @ts-expect-error
-      dataGE[0].data.push({
-        x: date.getTime(),
-        y: +1 * value
-      });
-    }
-    Array.prototype.push.apply(datasets, dataGE);
-
-
-    borderColor = colors.offsets_gas;
-    labelText = labels.offsets_gas;
-
-    const dataGO: ChartDataset<"bar">[] = [];
-    dataGO.push({
-      label: labelText,
-      stack: "stack",
-      backgroundColor: borderColor + "7F",
-      data: [],
-    });
-
-    // Process chart data.
-    for (const key of uniqueKeys) {
-      const value = carbonDioxideEquivalentGasOffsets[key] || 0;
-      const date = new Date(key);
-      // @ts-expect-error
-      dataGO[0].data.push({
-        x: date.getTime(),
-        y: -1 * value
-      });
-    }
-    Array.prototype.push.apply(datasets, dataGO);
-
 
 
     this._chartData = {

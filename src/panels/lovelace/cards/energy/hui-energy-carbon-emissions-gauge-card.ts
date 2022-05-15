@@ -90,21 +90,35 @@ class HuiEnergyCarbonEmissionsGaugeCard
     let netEmissions = 0;
     let absoluteEmissions = 0;
 
+    let allKeys: string[] = [];
+    Object.values(this._data.emissions).forEach((emission) => {
+        allKeys = allKeys.concat(Object.keys(emission));
+    });
+    const uniqueKeys = Array.from(new Set(allKeys));
 
-    const electricityEmissions = sumEmissions( this._data.emissions.emission_array[0] );
-    const electricityOffsets = sumEmissions(this._data.emissions.emission_array[1]);
-    const electricityAvoided = sumEmissions(this._data.emissions.emission_array[2]);
-    const gasEmissions = sumEmissions(this._data.emissions.emission_array[3]);
-    const gasOffsets = sumEmissions(this._data.emissions.emission_array[4]);
+    // eslint-disable-next-line no-console
+    console.log({uniqueKeys});
+
+    for (const key of uniqueKeys) {
+      const tempE = sumEmissions( this._data.emissions.emission_array3_emissions[key] );
+      netEmissions += tempE;
+      absoluteEmissions += tempE;
+
+      const tempO = sumEmissions( this._data.emissions.emission_array3_offsets[key] );
+      netEmissions += tempO;
+
+      const tempA = sumEmissions( this._data.emissions.emission_array3_avoided[key] );
+      netEmissions += tempA;
+    }
+
+    // eslint-disable-next-line no-console
+    console.log({netEmissions});
+
+    // eslint-disable-next-line no-console
+    console.log({absoluteEmissions});
 
 
-    netEmissions += electricityEmissions;
-    absoluteEmissions += electricityEmissions;
-    netEmissions +=  electricityOffsets;
-    netEmissions +=  electricityAvoided;
-    netEmissions += gasEmissions;
-    absoluteEmissions += gasEmissions;
-    netEmissions +=  gasOffsets;
+    
   
   let value = 0;
   if( netEmissions > 0 ){

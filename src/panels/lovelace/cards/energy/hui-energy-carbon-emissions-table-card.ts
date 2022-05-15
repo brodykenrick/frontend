@@ -113,19 +113,76 @@ export class HuiEnergyCarbonEmissionsTableCard
     const borderColorEmissionsGas = colors.emissions_gas;
     const borderColorOffsetsGas = colors.offsets_gas;
    
-    const electricityEmissions = sumEmissions( this._data.emissions.emission_array[0] );
-    const electricityOffsets = sumEmissions(this._data.emissions.emission_array[1]);
-    const electricityAvoided = sumEmissions(this._data.emissions.emission_array[2]);
-    const gasEmissions = sumEmissions(this._data.emissions.emission_array[3]);
-    const gasOffsets = sumEmissions(this._data.emissions.emission_array[4]);
+    let electricityEmissions = 0;
+    let electricityOffsets = 0;
+    let electricityAvoided = 0;
+    let gasEmissions = 0;
+    let gasOffsets = 0;
+    let gasAvoided = 0;
 
-    netEmissions += electricityEmissions;
-    absoluteEmissions += electricityEmissions;
-    netEmissions +=  electricityOffsets;
-    netEmissions +=  electricityAvoided;
-    netEmissions += gasEmissions;
-    absoluteEmissions += gasEmissions;
-    netEmissions +=  gasOffsets;
+    let allKeys: string[] = [];
+    Object.values(this._data.emissions).forEach((emission) => {
+        allKeys = allKeys.concat(Object.keys(emission));
+    });
+    const uniqueKeys = Array.from(new Set(allKeys));
+
+    // eslint-disable-next-line no-console
+    console.log({uniqueKeys});
+
+    for (const key of uniqueKeys) {
+
+      if( this._data.emissions.emission_array3_emissions[key])
+      {
+        const tempE = sumEmissions( this._data.emissions.emission_array3_emissions[key] );
+        if(this._data.emissions.emission_array3_emissions[key].type === "grid")
+        {
+          electricityEmissions += tempE;
+        }
+        else
+        if(this._data.emissions.emission_array3_emissions[key].type === "gas")
+        {
+          gasEmissions += tempE;
+        }
+        netEmissions += tempE;
+        absoluteEmissions += tempE;
+      }
+
+      if( this._data.emissions.emission_array3_offsets[key])
+      {
+        const tempO = sumEmissions( this._data.emissions.emission_array3_offsets[key] );
+        if(this._data.emissions.emission_array3_offsets[key].type === "grid")
+        {
+          electricityOffsets += tempO;
+        }
+        else
+        if(this._data.emissions.emission_array3_offsets[key].type === "gas")
+        {
+          gasOffsets += tempO;
+        }
+        netEmissions += tempO;
+      }
+
+      if( this._data.emissions.emission_array3_avoided[key])
+      {
+        const tempA = sumEmissions( this._data.emissions.emission_array3_avoided[key] );
+        if(this._data.emissions.emission_array3_avoided[key].type === "grid")
+        {
+          electricityAvoided += tempA;
+        }
+        else
+        if(this._data.emissions.emission_array3_avoided[key].type === "gas")
+        {
+          gasAvoided += tempA;
+        }
+        netEmissions += tempA;
+      }
+    }
+
+    // eslint-disable-next-line no-console
+    console.log({netEmissions});
+
+    // eslint-disable-next-line no-console
+    console.log({absoluteEmissions});
 
     const data = this._data;
     // eslint-disable-next-line no-console
