@@ -21,7 +21,7 @@ import {
 */
 // import { labBrighten, labDarken } from "../../../../common/color/lab";
 import { formatTime } from "../../../../common/datetime/format_time";
-// import { computeStateName } from "../../../../common/entity/compute_state_name";
+import { computeStateName } from "../../../../common/entity/compute_state_name";
 import {
   formatNumber,
   numberFormatToLocale,
@@ -249,10 +249,58 @@ export class HuiEnergyCarbonEmissionsGraphCard
   private async _getStatistics(energyData: EnergyData): Promise<void> {
     const datasets: ChartDataset<"bar">[] = [];
 
+
+    const statistics: {
+      to_grid?: string[];
+      from_grid?: string[];
+      from_gas?: string[];
+    } = {};
+
+    for (const source of energyData.prefs.energy_sources) {
+
+      if (source.type !== "grid") {
+        continue;
+      }
+      // TODO: Add in gas.....
+
+      // grid source
+      for (const flowFrom of source.flow_from) {
+        if (statistics.from_grid) {
+          statistics.from_grid.push(flowFrom.stat_energy_from);
+        } else {
+          statistics.from_grid = [flowFrom.stat_energy_from];
+        }
+      }
+      for (const flowTo of source.flow_to) {
+        if (statistics.to_grid) {
+          statistics.to_grid.push(flowTo.stat_energy_to);
+        } else {
+          statistics.to_grid = [flowTo.stat_energy_to];
+        }
+      }
+    }
     
     this._start = energyData.start;
     this._end = energyData.end || endOfToday();
 
+    const combinedData: {
+      to_grid?: { [statId: string]: { [start: string]: number } };
+      from_grid?: { [statId: string]: { [start: string]: number } };
+      from_gas?: { [statId: string]: { [start: string]: number } };
+
+    } = {};
+
+    const summedData: {
+      to_grid?: { [start: string]: number };
+      from_grid?: { [start: string]: number };
+      from_gas?: { [start: string]: number };
+    } = {};
+
+    // eslint-disable-next-line no-console
+    console.log({ combinedData });
+
+    // eslint-disable-next-line no-console
+    console.log({ summedData });
 
     const computedStyles = getComputedStyle(this);
     const colors = {
@@ -340,8 +388,18 @@ export class HuiEnergyCarbonEmissionsGraphCard
 
       // Try to convert the emissions to the chart format here and push on to the datasets
       const data: ChartDataset<"bar">[] = [];
+
+      const entity = this.hass.states[sensorKeySensor];
+      const type = "this_will_fail_as_an_index";
+
+      const labelTextAlt = type in labels
+              ? labels[type]
+              : entity
+              ? computeStateName(entity)
+              : sensorKeySensor;
+
       data.push({
-        label: labelText,
+        label: labelTextAlt,
         stack: "stack",
         backgroundColor: borderColor + "7F",
         data: [],
@@ -395,8 +453,18 @@ export class HuiEnergyCarbonEmissionsGraphCard
 
       // Try to convert the emissions to the chart format here and push on to the datasets
       const data: ChartDataset<"bar">[] = [];
+
+      const entity = this.hass.states[sensorKeySensor];
+      const type = "this_will_fail_as_an_index";
+
+      const labelTextAlt = type in labels
+              ? labels[type]
+              : entity
+              ? computeStateName(entity)
+              : sensorKeySensor;
+
       data.push({
-        label: labelText,
+        label: labelTextAlt,
         stack: "stack",
         backgroundColor: borderColor + "7F",
         data: [],
@@ -450,8 +518,22 @@ export class HuiEnergyCarbonEmissionsGraphCard
 
       // Try to convert the emissions to the chart format here and push on to the datasets
       const data: ChartDataset<"bar">[] = [];
+
+
+      // TODO: Handle dark mode still....
+
+
+      const entity = this.hass.states[sensorKeySensor];
+      const type = "this_will_fail_as_an_index";
+
+      const labelTextAlt = type in labels
+              ? labels[type]
+              : entity
+              ? computeStateName(entity)
+              : sensorKeySensor;
+
       data.push({
-        label: labelText,
+        label: labelTextAlt,
         stack: "stack",
         backgroundColor: borderColor + "7F",
         data: [],
