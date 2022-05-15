@@ -28,6 +28,7 @@ export const emptyFlowFromGridSourceEnergyPreference =
     entity_energy_from: null,
     entity_energy_price: null,
     number_energy_price: null,
+    number_offset_percentage: null,
   });
 
 export const emptyFlowToGridSourceEnergyPreference =
@@ -37,6 +38,7 @@ export const emptyFlowToGridSourceEnergyPreference =
     entity_energy_to: null,
     entity_energy_price: null,
     number_energy_price: null,
+    number_offset_percentage: null, // TODO - Remove...
   });
 
 export const emptyGridSourceEnergyPreference =
@@ -92,6 +94,8 @@ export interface FlowFromGridSourceEnergyPreference {
   entity_energy_from: string | null;
   entity_energy_price: string | null;
   number_energy_price: number | null;
+
+  number_offset_percentage: number | null;
 }
 
 export interface FlowToGridSourceEnergyPreference {
@@ -105,6 +109,8 @@ export interface FlowToGridSourceEnergyPreference {
   entity_energy_to: string | null;
   entity_energy_price: string | null;
   number_energy_price: number | null;
+
+  number_offset_percentage: number | null; // TODO Remove this....
 }
 
 export interface GridSourceTypeEnergyPreference {
@@ -307,9 +313,9 @@ export interface EnergyData {
   stats: Statistics;
   co2SignalConfigEntry?: ConfigEntry;
   co2SignalEntity?: string;
-  fossilEnergyConsumption?: FossilEnergyConsumption;  // BK? Why separate?
 
-  // TODO - BK? Why would these be here and not included in the stats? What is special about fossilEnergy (and are these special also?)
+  // TODO - BK? Why would these be here and not included in the stats? What is special about fossilEnergy (and are emissions special also?)
+  fossilEnergyConsumption?: FossilEnergyConsumption;
   emissions?: Emissions;
 }
 
@@ -453,15 +459,27 @@ const getEnergyData = async (
 
 
   // TODO: Move this to config in UI
-  const co2_import_electricity_offset_factor = 1.0; // Percentage of non-fossil fuels you import and offset (i.e. GreenPower at 100% is a complete offset)
-  const co2_import_gas_offset_factor = 0.0;
+  let co2_import_electricity_offset_factor = 1.0; // Percentage of non-fossil fuels you import and offset (i.e. GreenPower at 100% is a complete offset)
+  const co2_import_gas_offset_factor = 0.0; // TODO: Rework this as it will be settable by some....
+
+  // eslint-disable-next-line no-console
+  console.log({ prefs });
+
+  const offset = prefs.energy_sources[0].flow_from[0].number_offset_percentage
+
+  // eslint-disable-next-line no-console
+  console.log({ offset });
+
+  co2_import_electricity_offset_factor = offset
+
+
 
 
   if (co2SignalEntityGridPercentageFossil !== undefined) {
     fossilEnergyConsumption = await getFossilEnergyConsumption(
       hass!,
       start,
-      consumptionStatIDs,
+      consumptionStatIDs, // TODO: Work out how this deals with gas....
       co2SignalEntityGridPercentageFossil,
       co2_import_electricity_offset_factor,
       end,
@@ -473,7 +491,7 @@ if (co2SignalEntityGridIntensity !== undefined) {
     const carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
       hass!,
       start,
-      consumptionStatIDs,
+      consumptionStatIDs, // TODO: Filter to be grid consume
       co2SignalEntityGridIntensity,
       600, // Default CO2equiv intensity TODO - Make this configurable
       1.0,
@@ -492,7 +510,7 @@ if (co2SignalEntityGridIntensity !== undefined) {
   const carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
     hass!,
     start,
-    consumptionStatIDs,
+    consumptionStatIDs, // TODO: Filter to be grid consume
     co2SignalEntityGridIntensity,
     600,
     co2_import_electricity_offset_factor,
@@ -512,7 +530,7 @@ if (co2SignalEntityGridIntensity !== undefined) {
     const carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
       hass!,
       start,
-      statIDs,
+      statIDs, // TODO: Filter to be grid return
       co2SignalEntityGridIntensity,
       600,
       1.0,
@@ -528,12 +546,12 @@ if (co2SignalEntityGridIntensity !== undefined) {
     emission_array.push( carbonDioxideEquivalentElectricityAvoided );
   }
 
-  // TODO : Make sense of this conversion for other energy types....
+  // TODO : Make sense of this conversion for other energy types for gas....
   if (co2SignalEntityGridIntensity !== undefined) {
     const carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
       hass!,
       start,
-      consumptionStatIDs,
+      consumptionStatIDs, // TODO: Filter to be gas consume
       co2SignalEntityGridIntensity,
       500,
       1.0,
@@ -553,7 +571,7 @@ if (co2SignalEntityGridIntensity !== undefined) {
   const carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
     hass!,
     start,
-    consumptionStatIDs,
+    consumptionStatIDs, // TODO: Filter to be gas consume
     co2SignalEntityGridIntensity,
     500,
     co2_import_gas_offset_factor,

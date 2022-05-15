@@ -14,6 +14,9 @@ export const mockEnergy = (hass: MockHomeAssistant) => {
             entity_energy_from: "sensor.energy_consumption_tarif_1",
             entity_energy_price: null,
             number_energy_price: null,
+
+            // TODO: Add in a test here
+            number_offset_percentage: null,
           },
           {
             stat_energy_from: "sensor.energy_consumption_tarif_2",
@@ -21,6 +24,9 @@ export const mockEnergy = (hass: MockHomeAssistant) => {
             entity_energy_from: "sensor.energy_consumption_tarif_2",
             entity_energy_price: null,
             number_energy_price: null,
+
+            // TODO: Add in a test here
+            number_offset_percentage: null,
           },
         ],
         flow_to: [
@@ -30,6 +36,9 @@ export const mockEnergy = (hass: MockHomeAssistant) => {
             entity_energy_to: "sensor.energy_production_tarif_1",
             entity_energy_price: null,
             number_energy_price: null,
+
+            // TODO: DO NOT add in a test here
+            number_offset_percentage: null,
           },
           {
             stat_energy_to: "sensor.energy_production_tarif_2",
@@ -37,6 +46,9 @@ export const mockEnergy = (hass: MockHomeAssistant) => {
             entity_energy_to: "sensor.energy_production_tarif_2",
             entity_energy_price: null,
             number_energy_price: null,
+
+            // TODO: DO NOT add in a test here
+            number_offset_percentage: null,
           },
         ],
         cost_adjustment_day: 0,

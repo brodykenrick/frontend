@@ -1320,7 +1320,12 @@
                 "cost_entity_input": "Entity with the current price",
                 "cost_number": "Use a static price",
                 "cost_number_input": "Price per kWh",
-                "cost_number_suffix": "{currency}/kWh"
+                "cost_number_suffix": "{currency}/kWh",
+                "carbon_offset_percentage_para": "Select the CO2-equivalent offset that your energy comes with.",
+                "no_carbon_offset": "No offset applies",
+                "carbon_offset_percentage_number": "Use a static offset percentage",
+                "carbon_offset_percentage_number_input": "Percent offset",
+                "carbon_offset_percentage_number_suffix": "%"
               },
               "to": {
                 "header": "Configure grid production",

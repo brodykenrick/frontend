@@ -38,6 +38,9 @@ export class DialogEnergyGridFlowSettings
 
   @state() private _costs?: "no-costs" | "number" | "entity" | "statistic";
 
+  @state() private _offset?: "no-offset" | "number";
+
+
   @state() private _error?: string;
 
   public async showDialog(
@@ -58,6 +61,9 @@ export class DialogEnergyGridFlowSettings
         ]
       ? "statistic"
       : "no-costs";
+      this._offset = this._source.number_offset_percentage
+      ? "number"
+      : "no-offset";
   }
 
   public closeDialog(): void {
@@ -207,6 +213,58 @@ export class DialogEnergyGridFlowSettings
             </ha-textfield>`
           : ""}
 
+
+
+        ${ this._params!.direction === "from"
+              ? html`<p>
+              ${this.hass.localize(
+                `ui.panel.config.energy.grid.flow_dialog.from.carbon_offset_percentage_para`
+              )}
+            </p>
+            <ha-formfield
+          .label=${this.hass.localize(
+            `ui.panel.config.energy.grid.flow_dialog.from.no_carbon_offset`
+          )}
+        >
+          <ha-radio
+            value="no-offset"
+            name="offsets"
+            .checked=${this._offset === "no-offset"}
+            @change=${this._handleOffsetChanged}
+          ></ha-radio>
+        </ha-formfield>
+
+            <ha-formfield
+          .label=${this.hass.localize(
+            `ui.panel.config.energy.grid.flow_dialog.from.carbon_offset_percentage_number`
+          )}
+        >
+          <ha-radio
+            value="number"
+            name="offsets"
+            .checked=${this._offset === "number"}
+            @change=${this._handleOffsetChanged}
+          ></ha-radio>
+        </ha-formfield>
+        ${this._offset === "number"
+          ? html`<ha-textfield
+              .label=${this.hass.localize(
+                `ui.panel.config.energy.grid.flow_dialog.from.carbon_offset_percentage_number_input`
+              )}
+              class="offset-options"
+              step="1"
+              type="number"
+              .value=${this._source.number_offset_percentage}
+              .suffix=${this.hass.localize(
+                `ui.panel.config.energy.grid.flow_dialog.from.carbon_offset_percentage_number_suffix`
+              )}
+              @change=${this._numberOffsetChanged}
+            >
+            </ha-textfield>`
+          : ""}`
+              : "" }
+        
+
         <mwc-button @click=${this.closeDialog} slot="secondaryAction">
           ${this.hass.localize("ui.common.cancel")}
         </mwc-button>
@@ -224,6 +282,26 @@ export class DialogEnergyGridFlowSettings
       </ha-dialog>
     `;
   }
+
+
+
+private _handleOffsetChanged(ev: CustomEvent) {
+  const input = ev.currentTarget as HaRadio;
+  this._offset = input.value as any;
+}
+
+
+private _numberOffsetChanged(ev: CustomEvent) {
+  this._source = {
+    ...this._source!,
+    number_offset_percentage: Number((ev.target as any).value)
+  };
+}
+
+
+
+
+
 
   private _handleCostChanged(ev: CustomEvent) {
     const input = ev.currentTarget as HaRadio;
@@ -282,6 +360,9 @@ export class DialogEnergyGridFlowSettings
         this._source!.number_energy_price = null;
         this._costStat = null;
       }
+      if (this._offset === "no-offset") {
+        this._source!.number_offset_percentage = null;
+      }
       await this._params!.saveCallback(this._source!);
       this.closeDialog();
     } catch (err: any) {
@@ -300,6 +381,11 @@ export class DialogEnergyGridFlowSettings
           display: block;
         }
         .price-options {
+          display: block;
+          padding-left: 52px;
+          margin-top: -8px;
+        }
+        .offset-options {
           display: block;
           padding-left: 52px;
           margin-top: -8px;

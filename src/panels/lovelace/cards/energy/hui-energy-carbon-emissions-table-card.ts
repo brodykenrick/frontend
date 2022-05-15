@@ -128,6 +128,15 @@ export class HuiEnergyCarbonEmissionsTableCard
     absoluteEmissions += gasEmissions;
     netEmissions +=  gasOffsets;
 
+    const data = this._data;
+    // eslint-disable-next-line no-console
+    console.log({ data });
+
+    // TODO: Get this more elegantly...
+    const data_offset = this._data.prefs.energy_sources[0].flow_from[0].number_offset_percentage;
+    // eslint-disable-next-line no-console
+    console.log({ data_offset });
+
 
 
     return html` <ha-card>
