@@ -396,17 +396,13 @@ const getEnergyData = async (
 
   // TODO: Move this to config in UI
   let co2_import_electricity_offset_factor = 1.0; // Percentage of non-fossil fuels you import and offset (i.e. GreenPower at 100% is a complete offset)
-  const co2_import_gas_offset_factor = 0.05; // TODO: Rework this as it will be settable by some....
+  const co2_import_gas_offset_factor = 0.00; // TODO: Rework this as it will be settable by some....
 
-  // eslint-disable-next-line no-console
-  console.log({ prefs });
-
+  // TODO Fix this to get from tehe correct data
   const offset = prefs.energy_sources[0].flow_from[0].number_offset_percentage
 
-  // eslint-disable-next-line no-console
-  console.log({ offset });
 
-  co2_import_electricity_offset_factor = offset
+  co2_import_electricity_offset_factor = offset / 100.0
 
 
   const gridConsumptionStatIDs: string[] = [];
@@ -433,6 +429,7 @@ const getEnergyData = async (
     }
 
     if (source.type === "gas") {
+      gasConsumptionStatIDs.push(source.stat_energy_from);
       
       // eslint-disable-next-line no-await-in-loop
       let carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
@@ -470,10 +467,9 @@ const getEnergyData = async (
       carbonDioxideEquivalentGasOffsets.carbonDioxideEquivalent = carbonDioxideEquivalentTemp;
       carbonDioxideEquivalentGasOffsets.type = "gas";
       carbonDioxideEquivalentGasOffsets.kind = "offsets";
-      emission_array3_offsets[ source.stat_energy_from ] = carbonDioxideEquivalentGasEmissions;
+      emission_array3_offsets[ source.stat_energy_from ] = carbonDioxideEquivalentGasOffsets;
 
 
-      gasConsumptionStatIDs.push(source.stat_energy_from);
       statIDs.push(source.stat_energy_from);
       const entity = hass.states[source.stat_energy_from];
       if (!entity) {
@@ -616,7 +612,7 @@ const getEnergyData = async (
 
  
 
-  // TODO: Work out how this deals with gas.... oh, it ignores it.....
+  // TODO: Work out how Fossil Energy deals with gas.... oh, it ignores it.....
   // Consider renaming this to just be grid fossil consumption (that is what the graphic shows so I guess it makes sense.......)
   if (co2SignalEntityGridPercentageFossil !== undefined) {
     fossilEnergyConsumption = await getFossilEnergyConsumption(
