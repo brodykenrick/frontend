@@ -82,7 +82,6 @@ export class HuiEnergyCarbonEmissionsTableCard
     let netEmissions = 0;
     let absoluteEmissions = 0;
 
-
     const computedStyles = getComputedStyle(this);
     const colors = {
       emissions_electricity: computedStyles
@@ -170,7 +169,7 @@ export class HuiEnergyCarbonEmissionsTableCard
               </tr>
             </thead>
             <tbody class="mdc-data-table__content">
-                <tr class="mdc-data-table__row">
+<tr class="mdc-data-table__row">
                   <td class="mdc-data-table__cell cell-bullet">
                     <div
                       class="bullet"

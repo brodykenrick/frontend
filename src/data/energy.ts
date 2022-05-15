@@ -287,10 +287,18 @@ export const getFossilEnergyConsumption = async (
       period,
     });
 
+interface IDictionary {
+  [statisticId: string]: CarbonDioxideEquivalent_Emission[];
+}
+
 
 // Probably want a type (gas, grid/electricity) and another type for the kind of emission (emitted, avoided, offset)
 export interface Emissions {
   emission_array?: CarbonDioxideEquivalent_Emission[];
+
+  emission_array3_emissions: IDictionary;
+  emission_array3_offsets: IDictionary;
+  emission_array3_avoided: IDictionary;
 }
 
 
@@ -304,6 +312,7 @@ interface EnergySourceByType {
 
 export const energySourcesByType = (prefs: EnergyPreferences) =>
   groupBy(prefs.energy_sources, (item) => item.type) as EnergySourceByType;
+
 
 export interface EnergyData {
   start: Date;
@@ -319,6 +328,9 @@ export interface EnergyData {
   emissions?: Emissions;
 }
 
+
+
+
 const getEnergyData = async (
   hass: HomeAssistant,
   prefs: EnergyPreferences,
@@ -333,6 +345,8 @@ const getEnergyData = async (
 
   // TODO - This is something to rework a little (as input and output can be different)
   // I don't think CO2signal is easy to distinguish programattically what the intensity of "just green" is
+
+  // OK, weird -- we just look up the first entry if any exist...
   const co2SignalConfigEntry = configEntries.length
     ? configEntries[0]
     : undefined;
@@ -366,7 +380,38 @@ const getEnergyData = async (
     }
   }
 
-  const consumptionStatIDs: string[] = [];
+  const dayDifference = differenceInDays(end || new Date(), start);
+
+  interface IDictionary {
+    [statisticId: string]: CarbonDioxideEquivalent_Emission[];
+  }
+  const emission_array3_emissions = {} as IDictionary;
+  const emission_array3_offsets = {} as IDictionary;
+  const emission_array3_avoided = {} as IDictionary;
+
+
+
+  // TODO: Move this to config in UI
+  let co2_import_electricity_offset_factor = 1.0; // Percentage of non-fossil fuels you import and offset (i.e. GreenPower at 100% is a complete offset)
+  const co2_import_gas_offset_factor = 0.05; // TODO: Rework this as it will be settable by some....
+
+  // eslint-disable-next-line no-console
+  console.log({ prefs });
+
+  const offset = prefs.energy_sources[0].flow_from[0].number_offset_percentage
+
+  // eslint-disable-next-line no-console
+  console.log({ offset });
+
+  co2_import_electricity_offset_factor = offset
+
+
+  const gridConsumptionStatIDs: string[] = [];
+  const gridReturnStatIDs: string[] = [];
+  const gasConsumptionStatIDs: string[] = [];
+
+  
+
   const statIDs: string[] = [];
   const gasSources: GasSourceTypeEnergyPreference[] =
     prefs.energy_sources.filter(
@@ -385,6 +430,47 @@ const getEnergyData = async (
     }
 
     if (source.type === "gas") {
+      
+      // eslint-disable-next-line no-await-in-loop
+      let carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
+        hass!,
+        start,
+        gasConsumptionStatIDs,
+        co2SignalEntityGridIntensity,
+        500,
+        1.0, // Actual emissions
+        end,
+        dayDifference > 35 ? "month" : dayDifference > 2 ? "day" : "hour"
+      );
+      const carbonDioxideEquivalentGasEmissions = {} as  GasCarbonDioxideEquivalent;
+  
+      carbonDioxideEquivalentGasEmissions.isEmission = true;
+      carbonDioxideEquivalentGasEmissions.carbonDioxideEquivalent = carbonDioxideEquivalentTemp;
+      carbonDioxideEquivalentGasEmissions.type = "gas";
+      carbonDioxideEquivalentGasEmissions.kind = "emissions";
+      emission_array3_emissions[ source.stat_energy_from ] = carbonDioxideEquivalentGasEmissions;
+
+      // eslint-disable-next-line no-await-in-loop
+      carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
+        hass!,
+        start,
+        gasConsumptionStatIDs,
+        co2SignalEntityGridIntensity,
+        500,
+        co2_import_gas_offset_factor,
+        end,
+        dayDifference > 35 ? "month" : dayDifference > 2 ? "day" : "hour"
+      );
+      const carbonDioxideEquivalentGasOffsets = {} as  GasCarbonDioxideEquivalent;
+    
+      carbonDioxideEquivalentGasOffsets.isEmission = false;
+      carbonDioxideEquivalentGasOffsets.carbonDioxideEquivalent = carbonDioxideEquivalentTemp;
+      carbonDioxideEquivalentGasOffsets.type = "gas";
+      carbonDioxideEquivalentGasOffsets.kind = "offsets";
+      emission_array3_offsets[ source.stat_energy_from ] = carbonDioxideEquivalentGasEmissions;
+
+
+      gasConsumptionStatIDs.push(source.stat_energy_from);
       statIDs.push(source.stat_energy_from);
       const entity = hass.states[source.stat_energy_from];
       if (!entity) {
@@ -418,7 +504,53 @@ const getEnergyData = async (
 
     // grid source
     for (const flowFrom of source.flow_from) {
-      consumptionStatIDs.push(flowFrom.stat_energy_from);
+      gridConsumptionStatIDs.push(flowFrom.stat_energy_from);
+
+      /// TODO: Come back to optimise this....
+      // eslint-disable-next-line no-await-in-loop
+      let carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
+        hass!,
+        start,
+        gridConsumptionStatIDs,
+        co2SignalEntityGridIntensity,
+        600, // Default CO2equiv intensity TODO - Make this configurable
+        1.0, // Actual emissions
+        end,
+        dayDifference > 35 ? "month" : dayDifference > 2 ? "day" : "hour"
+      );
+      const carbonDioxideEquivalentElectricityEmissions = {} as  ElectricityCarbonDioxideEquivalent;
+      carbonDioxideEquivalentElectricityEmissions.isEmission = true;
+      carbonDioxideEquivalentElectricityEmissions.carbonDioxideEquivalent = carbonDioxideEquivalentTemp;
+      carbonDioxideEquivalentElectricityEmissions.type = "grid";
+      carbonDioxideEquivalentElectricityEmissions.kind = "emissions";
+  
+      emission_array3_emissions[ flowFrom.stat_energy_from ] = carbonDioxideEquivalentElectricityEmissions;
+
+
+
+      // eslint-disable-next-line no-await-in-loop
+      carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
+        hass!,
+        start,
+        gridConsumptionStatIDs,
+        co2SignalEntityGridIntensity,
+        600,
+        co2_import_electricity_offset_factor,
+        end,
+        dayDifference > 35 ? "month" : dayDifference > 2 ? "day" : "hour"
+      );
+      const carbonDioxideEquivalentElectricityOffsets = {} as  ElectricityCarbonDioxideEquivalent;
+    
+      carbonDioxideEquivalentElectricityOffsets.isEmission = false;
+      carbonDioxideEquivalentElectricityOffsets.carbonDioxideEquivalent = carbonDioxideEquivalentTemp;
+      carbonDioxideEquivalentElectricityOffsets.type = "grid";
+      carbonDioxideEquivalentElectricityOffsets.kind = "offsets";
+
+      emission_array3_offsets[ flowFrom.stat_energy_from ] = carbonDioxideEquivalentElectricityOffsets;
+
+
+      //// yyyy
+      
       statIDs.push(flowFrom.stat_energy_from);
       if (flowFrom.stat_cost) {
         statIDs.push(flowFrom.stat_cost);
@@ -429,6 +561,28 @@ const getEnergyData = async (
       }
     }
     for (const flowTo of source.flow_to) {
+      gridReturnStatIDs.push(flowTo.stat_energy_to);
+
+      // eslint-disable-next-line no-await-in-loop
+      const carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
+        hass!,
+        start,
+        gridReturnStatIDs,
+        co2SignalEntityGridIntensity,
+        600,
+        1.0,
+        end,
+        dayDifference > 35 ? "month" : dayDifference > 2 ? "day" : "hour"
+      );
+      const carbonDioxideEquivalentElectricityAvoided = {} as  ElectricityCarbonDioxideEquivalent;
+  
+      carbonDioxideEquivalentElectricityAvoided.isEmission = false;
+      carbonDioxideEquivalentElectricityAvoided.carbonDioxideEquivalent = carbonDioxideEquivalentTemp;
+      carbonDioxideEquivalentElectricityAvoided.type = "grid";
+      carbonDioxideEquivalentElectricityAvoided.kind = "avoided";
+      emission_array3_avoided[ flowTo.stat_energy_to ] = carbonDioxideEquivalentElectricityAvoided;
+
+
       statIDs.push(flowTo.stat_energy_to);
       if (flowTo.stat_compensation) {
         statIDs.push(flowTo.stat_compensation);
@@ -440,7 +594,7 @@ const getEnergyData = async (
     }
   }
 
-  const dayDifference = differenceInDays(end || new Date(), start);
+  
 
   // Subtract 1 hour from start to get starting point data
   const startMinHour = addHours(start, -1);
@@ -458,40 +612,49 @@ const getEnergyData = async (
   const emission_array = [] as  CarbonDioxideEquivalent_Emission[];
 
 
-  // TODO: Move this to config in UI
-  let co2_import_electricity_offset_factor = 1.0; // Percentage of non-fossil fuels you import and offset (i.e. GreenPower at 100% is a complete offset)
-  const co2_import_gas_offset_factor = 0.0; // TODO: Rework this as it will be settable by some....
+
+
+
+  
+
+
 
   // eslint-disable-next-line no-console
-  console.log({ prefs });
-
-  const offset = prefs.energy_sources[0].flow_from[0].number_offset_percentage
+  console.log({ gridConsumptionStatIDs });
 
   // eslint-disable-next-line no-console
-  console.log({ offset });
+  console.log({ gridReturnStatIDs });
 
-  co2_import_electricity_offset_factor = offset
+  // eslint-disable-next-line no-console
+  console.log({ gasConsumptionStatIDs });
 
 
+  // eslint-disable-next-line no-console
+  console.log({ stats });
 
+  
 
+  // TODO: Work out how this deals with gas.... oh, it ignores it.....
+  // Consider renaming this to just be grid fossil consumption (that is what the graphic shows so I guess it makes sense.......)
   if (co2SignalEntityGridPercentageFossil !== undefined) {
     fossilEnergyConsumption = await getFossilEnergyConsumption(
       hass!,
       start,
-      consumptionStatIDs, // TODO: Work out how this deals with gas....
+      gridConsumptionStatIDs, 
       co2SignalEntityGridPercentageFossil,
       co2_import_electricity_offset_factor,
       end,
       dayDifference > 35 ? "month" : dayDifference > 2 ? "day" : "hour"
     );
 }
-    
+
+
+
 if (co2SignalEntityGridIntensity !== undefined) {
-    const carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
+    let carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
       hass!,
       start,
-      consumptionStatIDs, // TODO: Filter to be grid consume
+      gridConsumptionStatIDs,
       co2SignalEntityGridIntensity,
       600, // Default CO2equiv intensity TODO - Make this configurable
       1.0,
@@ -504,13 +667,14 @@ if (co2SignalEntityGridIntensity !== undefined) {
     carbonDioxideEquivalentElectricityEmissions.type = "grid";
     carbonDioxideEquivalentElectricityEmissions.kind = "emissions";
     emission_array.push( carbonDioxideEquivalentElectricityEmissions );
-}
 
-if (co2SignalEntityGridIntensity !== undefined) {
-  const carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
+    // emission_array3[gridConsumptionStatIDs[0]] = carbonDioxideEquivalentElectricityEmissions;
+
+    
+   carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
     hass!,
     start,
-    consumptionStatIDs, // TODO: Filter to be grid consume
+    gridConsumptionStatIDs,
     co2SignalEntityGridIntensity,
     600,
     co2_import_electricity_offset_factor,
@@ -524,13 +688,13 @@ if (co2SignalEntityGridIntensity !== undefined) {
   carbonDioxideEquivalentElectricityOffsets.type = "grid";
   carbonDioxideEquivalentElectricityOffsets.kind = "offsets";
   emission_array.push( carbonDioxideEquivalentElectricityOffsets );
-}
 
-if (co2SignalEntityGridIntensity !== undefined) {
-    const carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
+  
+
+     carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
       hass!,
       start,
-      statIDs, // TODO: Filter to be grid return
+      gridReturnStatIDs,
       co2SignalEntityGridIntensity,
       600,
       1.0,
@@ -544,14 +708,12 @@ if (co2SignalEntityGridIntensity !== undefined) {
     carbonDioxideEquivalentElectricityAvoided.type = "grid";
     carbonDioxideEquivalentElectricityAvoided.kind = "avoided";
     emission_array.push( carbonDioxideEquivalentElectricityAvoided );
-  }
 
-  // TODO : Make sense of this conversion for other energy types for gas....
-  if (co2SignalEntityGridIntensity !== undefined) {
-    const carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
+    
+     carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
       hass!,
       start,
-      consumptionStatIDs, // TODO: Filter to be gas consume
+      gasConsumptionStatIDs,
       co2SignalEntityGridIntensity,
       500,
       1.0,
@@ -565,13 +727,12 @@ if (co2SignalEntityGridIntensity !== undefined) {
     carbonDioxideEquivalentGasEmissions.type = "gas";
     carbonDioxideEquivalentGasEmissions.kind = "emissions";
     emission_array.push( carbonDioxideEquivalentGasEmissions );
-}
 
-if (co2SignalEntityGridIntensity !== undefined) {
-  const carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
+    
+   carbonDioxideEquivalentTemp = await getCarbonDioxideEquivalent(
     hass!,
     start,
-    consumptionStatIDs, // TODO: Filter to be gas consume
+    gasConsumptionStatIDs,
     co2SignalEntityGridIntensity,
     500,
     co2_import_gas_offset_factor,
@@ -587,6 +748,8 @@ if (co2SignalEntityGridIntensity !== undefined) {
   emission_array.push( carbonDioxideEquivalentGasOffsets );
 }
 
+
+
   Object.values(stats).forEach((stat) => {
     // if the start of the first value is after the requested period, we have the first data point, and should add a zero point
     if (stat.length && new Date(stat[0].start) > startMinHour) {
@@ -600,13 +763,16 @@ if (co2SignalEntityGridIntensity !== undefined) {
     }
   });
 
-
+ 
   const emissions = {
-    emission_array: emission_array
+    emission_array: emission_array,
+    emission_array3_emissions: emission_array3_emissions,
+    emission_array3_offsets: emission_array3_offsets,
+    emission_array3_avoided: emission_array3_avoided,
   };
 
   // eslint-disable-next-line no-console
-  // console.log({ emissions });
+  console.log({ emissions });
 
 
 

@@ -299,13 +299,15 @@ export class HuiEnergyCarbonEmissionsGraphCard
 
     // TODO: Move this to an array to loop over (need to capture the sign of the carbon also in that)
     let allKeys: string[] = [];
-    allKeys = allKeys.concat(Object.keys( carbonDioxideEquivalentElectricityEmissions ));
-    allKeys = allKeys.concat(Object.keys( carbonDioxideEquivalentElectricityAvoided ));
-    allKeys = allKeys.concat(Object.keys( carbonDioxideEquivalentElectricityOffsets ));
-    allKeys = allKeys.concat(Object.keys( carbonDioxideEquivalentGasEmissions ));
-    allKeys = allKeys.concat(Object.keys( carbonDioxideEquivalentGasOffsets ));
-
+    Object.values(energyData.emissions.emission_array).forEach((emission) => {
+        allKeys = allKeys.concat(Object.keys(emission.carbonDioxideEquivalent));
+    });
     const uniqueKeys = Array.from(new Set(allKeys));
+
+ 
+
+
+  
 
     // Not supporting dark mode as yet...... see usage graphs
     let borderColor = colors.emissions_electricity;
